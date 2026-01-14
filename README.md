@@ -1,6 +1,6 @@
 # Teacher Gabriel
 
-Sistema web multiusuário com comunicação em tempo real usando WebSockets (Socket.IO).
+Sistema web multiusuário com comunicação em tempo real usando **Supabase Realtime** e **PostgreSQL**, totalmente compatível com **Vercel** e arquitetura serverless.
 
 ## 🚀 Tecnologias
 
@@ -8,75 +8,90 @@ Sistema web multiusuário com comunicação em tempo real usando WebSockets (Soc
 - **React 18** - Biblioteca JavaScript para construção de interfaces
 - **TypeScript** - Superset do JavaScript com tipagem estática
 - **Tailwind CSS** - Framework CSS utility-first
-- **Socket.IO Client** - Cliente para comunicação em tempo real
+- **Supabase JS Client** - Cliente para comunicação com Supabase e Realtime
 
-### Backend
-- **Node.js** - Runtime JavaScript
-- **Express** - Framework web para Node.js
-- **Socket.IO** - Biblioteca para comunicação em tempo real via WebSockets
-- **TypeScript** - Tipagem estática
+### Backend & Infraestrutura
+- **Supabase** - Backend as a Service (BaaS)
+  - **PostgreSQL** - Banco de dados relacional
+  - **Realtime** - Subscriptions em tempo real via WebSockets gerenciados
+- **Vercel** - Hospedagem serverless do frontend
 
 ## 📋 Funcionalidades
 
 - ✅ Sistema multiusuário com suporte a múltiplas conexões simultâneas
 - ✅ Autenticação simples (apenas nome e papel - teacher ou student)
-- ✅ Gerenciamento de sessões por conexão WebSocket
+- ✅ Gerenciamento de sessões via localStorage
 - ✅ Teachers podem criar posts
 - ✅ Students podem visualizar posts e responder
-- ✅ Atualizações em tempo real para todos os usuários conectados
+- ✅ Atualizações em tempo real para todos os usuários conectados via Supabase Realtime
 - ✅ Interface moderna e responsiva
 - ✅ Sem necessidade de refresh da página
+- ✅ **Totalmente compatível com Vercel e arquitetura serverless**
+- ✅ Persistência de dados em PostgreSQL
+- ✅ Escalável e pronto para produção
 
 ## 🛠️ Instalação
 
+### 1. Clone o repositório
+
 ```bash
+git clone <seu-repositorio>
+cd teacher-gabriel
 npm install
 ```
 
-## 🏃 Desenvolvimento
+### 2. Configure o Supabase
 
-O projeto usa `concurrently` para rodar o servidor e o cliente simultaneamente:
+1. Acesse [https://supabase.com](https://supabase.com) e crie uma conta (grátis)
+2. Crie um novo projeto
+3. Vá em **SQL Editor** e execute o script em `supabase/schema.sql`
+4. Vá em **Settings > API** e copie:
+   - **Project URL**
+   - **anon/public key**
+
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
+```
+
+**Para produção na Vercel:**
+- Adicione essas variáveis em **Settings > Environment Variables** no painel da Vercel
+
+## 🏃 Desenvolvimento Local
 
 ```bash
 npm run dev
 ```
 
-Isso iniciará:
-- **Backend**: `http://localhost:3001` (Socket.IO server)
-- **Frontend**: `http://localhost:5173` (Vite dev server)
-
-### Comandos individuais
-
-```bash
-# Apenas o servidor
-npm run dev:server
-
-# Apenas o cliente
-npm run dev:client
-```
+O frontend estará disponível em `http://localhost:5173`
 
 ## 📁 Estrutura do Projeto
 
 ```
 teacher-gabriel/
-├── server/              # Backend
-│   ├── index.ts        # Servidor Express + Socket.IO
-│   └── tsconfig.json   # Configuração TypeScript do servidor
-├── src/                # Frontend
-│   ├── components/     # Componentes React
-│   │   ├── Login.tsx          # Tela de login
-│   │   ├── Dashboard.tsx      # Dashboard principal
-│   │   ├── PostForm.tsx       # Formulário de criação de posts
-│   │   └── ReplyForm.tsx      # Formulário de respostas
-│   ├── contexts/       # Contextos React
-│   │   └── UserContext.tsx    # Contexto do usuário logado
-│   ├── lib/           # Utilitários
-│   │   └── socket.ts          # Configuração do Socket.IO client
-│   ├── types/         # Tipos TypeScript
-│   │   └── index.ts           # Definições de tipos
-│   ├── App.tsx        # Componente principal
-│   ├── main.tsx       # Ponto de entrada
-│   └── index.css      # Estilos globais com Tailwind
+├── supabase/
+│   └── schema.sql          # Schema do banco de dados PostgreSQL
+├── src/
+│   ├── components/         # Componentes React
+│   │   ├── Login.tsx       # Tela de login
+│   │   ├── Dashboard.tsx   # Dashboard principal
+│   │   ├── PostForm.tsx    # Formulário de criação de posts
+│   │   └── ReplyForm.tsx   # Formulário de respostas
+│   ├── contexts/           # Contextos React
+│   │   └── UserContext.tsx # Contexto do usuário logado
+│   ├── lib/                # Utilitários
+│   │   └── supabase.ts     # Configuração do cliente Supabase
+│   ├── types/              # Tipos TypeScript
+│   │   └── index.ts        # Definições de tipos
+│   ├── App.tsx             # Componente principal
+│   ├── main.tsx            # Ponto de entrada
+│   └── index.css           # Estilos globais com Tailwind
+├── .env.example            # Exemplo de variáveis de ambiente
+├── vercel.json             # Configuração do Vercel
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -85,64 +100,131 @@ teacher-gabriel/
 
 ## 🎯 Como Usar
 
-1. **Inicie o servidor e cliente**:
+1. **Configure o Supabase** (veja seção de instalação acima)
+
+2. **Inicie o desenvolvimento**:
    ```bash
    npm run dev
    ```
 
-2. **Acesse a aplicação**:
+3. **Acesse a aplicação**:
    - Abra `http://localhost:5173` no navegador
 
-3. **Faça login**:
+4. **Faça login**:
    - Informe seu nome
    - Escolha seu papel: **Teacher** ou **Student**
    - Clique em "Entrar"
 
-4. **Como Teacher**:
+5. **Como Teacher**:
    - Você pode criar posts usando o formulário no topo
    - Todos os posts criados aparecem instantaneamente para todos os students conectados
    - Você pode ver todas as respostas dos students em tempo real
 
-5. **Como Student**:
+6. **Como Student**:
    - Você pode visualizar todos os posts criados pelos teachers
    - Você pode responder a qualquer post
    - Suas respostas aparecem instantaneamente para todos os usuários conectados
 
-## 🔌 Eventos Socket.IO
+## 🚀 Deploy na Vercel
 
-### Cliente → Servidor
+### 1. Prepare o repositório
 
-- `login` - Autenticação do usuário
-- `create-post` - Criar novo post (apenas teachers)
-- `create-reply` - Criar resposta (apenas students)
+```bash
+git add .
+git commit -m "Preparar para deploy"
+git push origin main
+```
 
-### Servidor → Cliente
+### 2. Conecte com a Vercel
 
-- `login-success` - Confirmação de login bem-sucedido
-- `posts-updated` - Lista completa de posts (enviado ao conectar)
-- `post-created` - Novo post criado (broadcast para todos)
-- `reply-created` - Nova resposta criada (broadcast para todos)
-- `user-connected` - Notificação de usuário conectado
-- `user-disconnected` - Notificação de usuário desconectado
-- `error` - Mensagem de erro
+1. Acesse [https://vercel.com](https://vercel.com)
+2. Importe seu repositório
+3. Configure as variáveis de ambiente:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy!
+
+### 3. Verifique o funcionamento
+
+Após o deploy, acesse sua URL da Vercel e teste:
+- Login de múltiplos usuários
+- Criação de posts em tempo real
+- Respostas em tempo real
+- Sincronização entre diferentes navegadores/abas
+
+## 🔌 Como Funciona o Realtime
+
+O sistema usa **Supabase Realtime Subscriptions** para escutar mudanças no banco de dados:
+
+1. **Posts**: Quando um teacher cria um post, ele é inserido no PostgreSQL
+2. **Subscription**: Todos os clientes conectados recebem o evento `INSERT` via Realtime
+3. **Respostas**: Quando um student responde, o mesmo processo acontece
+4. **Sincronização**: Todos os usuários veem as atualizações instantaneamente
+
+### Eventos Realtime
+
+- `postgres_changes` na tabela `posts` (evento: `INSERT`)
+- `postgres_changes` na tabela `replies` (evento: `INSERT`)
+
+## 🗄️ Estrutura do Banco de Dados
+
+### Tabela `posts`
+- `id` (UUID) - Chave primária
+- `teacher_name` (TEXT) - Nome do teacher
+- `content` (TEXT) - Conteúdo do post
+- `created_at` (TIMESTAMP) - Data de criação
+
+### Tabela `replies`
+- `id` (UUID) - Chave primária
+- `post_id` (UUID) - Referência ao post
+- `student_name` (TEXT) - Nome do student
+- `content` (TEXT) - Conteúdo da resposta
+- `created_at` (TIMESTAMP) - Data de criação
 
 ## 🔒 Permissões
 
-- **Teachers**: Podem criar posts
-- **Students**: Podem visualizar posts e criar respostas
-- As permissões são validadas no servidor
+- **Teachers**: Podem criar posts (validação no frontend)
+- **Students**: Podem visualizar posts e criar respostas (validação no frontend)
+- **RLS (Row Level Security)**: Configurado para permitir leitura e escrita públicas
+  - ⚠️ Para produção, considere adicionar autenticação mais robusta
 
-## 🌐 Escalabilidade
+## 🌐 Arquitetura Serverless
 
-O sistema está preparado para escalar:
-- Gerenciamento de múltiplas conexões simultâneas
-- Broadcast eficiente de eventos
-- Armazenamento em memória (pode ser facilmente migrado para banco de dados)
-- Estrutura modular e separação clara de responsabilidades
+Este sistema é **100% compatível com Vercel** porque:
 
-## 📝 Notas
+- ✅ Não usa conexões WebSocket persistentes no servidor
+- ✅ Não depende de estado em memória
+- ✅ Usa Supabase Realtime (gerenciado externamente)
+- ✅ Todas as operações são via API REST + Realtime subscriptions
+- ✅ Frontend estático pode ser servido pela Vercel
+- ✅ Banco de dados externo (Supabase PostgreSQL)
 
-- O sistema usa armazenamento em memória (dados são perdidos ao reiniciar o servidor)
-- Para produção, considere adicionar persistência com banco de dados
-- O sistema suporta múltiplos usuários conectados simultaneamente
-- Todas as atualizações são em tempo real via WebSockets
+## 📝 Notas Importantes
+
+- O sistema usa **localStorage** para persistir a sessão do usuário
+- Dados são armazenados permanentemente no PostgreSQL do Supabase
+- O Realtime funciona mesmo após refresh da página
+- Suporta múltiplos usuários conectados simultaneamente
+- Escalável automaticamente com Supabase
+
+## 🐛 Troubleshooting
+
+### Realtime não funciona
+- Verifique se as variáveis de ambiente estão configuradas corretamente
+- Confirme que o schema SQL foi executado no Supabase
+- Verifique se o Realtime está habilitado no projeto Supabase (Settings > API)
+
+### Erro de CORS
+- Supabase já está configurado para aceitar requisições de qualquer origem
+- Verifique se a URL do Supabase está correta
+
+### Dados não aparecem
+- Verifique o console do navegador para erros
+- Confirme que as tabelas foram criadas no Supabase
+- Verifique as políticas RLS no Supabase
+
+## 📚 Recursos
+
+- [Documentação Supabase](https://supabase.com/docs)
+- [Supabase Realtime](https://supabase.com/docs/guides/realtime)
+- [Vercel Documentation](https://vercel.com/docs)

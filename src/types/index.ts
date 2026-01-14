@@ -6,16 +6,16 @@ export interface User {
 
 export interface Post {
   id: string
-  teacherName: string
+  teacher_name: string
   content: string
-  timestamp: number
+  created_at: string
   replies?: Reply[]
 }
 
 export interface Reply {
   id: string
-  postId: string
-  studentName: string
+  post_id: string
+  student_name: string
   content: string
-  timestamp: number
+  created_at: string
 }

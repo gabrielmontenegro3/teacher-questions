@@ -1,37 +1,44 @@
 import { useState } from 'react'
-import { getSocket } from '../lib/socket'
+import { useUser } from '../contexts/UserContext'
+import { supabase } from '../lib/supabase'
 
 const PostForm = () => {
+  const { user } = useUser()
   const [content, setContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!content.trim()) {
       alert('Por favor, escreva algo no post')
       return
     }
 
-    const socket = getSocket()
-    if (!socket) {
-      alert('Não conectado ao servidor')
+    if (!user || user.role !== 'teacher') {
+      alert('Apenas teachers podem criar posts')
       return
     }
 
     setIsSubmitting(true)
 
-    socket.emit('create-post', { content: content.trim() })
+    try {
+      const { error } = await supabase.from('posts').insert({
+        teacher_name: user.name,
+        content: content.trim(),
+      })
 
-    socket.once('error', (data: { message: string }) => {
-      alert(`Erro: ${data.message}`)
-      setIsSubmitting(false)
-    })
+      if (error) {
+        throw error
+      }
 
-    // Limpar campo após envio (assumindo sucesso)
-    setTimeout(() => {
+      // Limpar campo após sucesso
       setContent('')
+    } catch (error: any) {
+      console.error('Erro ao criar post:', error)
+      alert(`Erro ao criar post: ${error.message}`)
+    } finally {
       setIsSubmitting(false)
-    }, 100)
+    }
   }
 
   return (

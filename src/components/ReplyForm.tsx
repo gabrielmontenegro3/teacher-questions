@@ -1,41 +1,49 @@
 import { useState } from 'react'
-import { getSocket } from '../lib/socket'
+import { useUser } from '../contexts/UserContext'
+import { supabase } from '../lib/supabase'
 
 interface ReplyFormProps {
   postId: string
 }
 
 const ReplyForm = ({ postId }: ReplyFormProps) => {
+  const { user } = useUser()
   const [content, setContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!content.trim()) {
       alert('Por favor, escreva uma resposta')
       return
     }
 
-    const socket = getSocket()
-    if (!socket) {
-      alert('Não conectado ao servidor')
+    if (!user || user.role !== 'student') {
+      alert('Apenas students podem responder')
       return
     }
 
     setIsSubmitting(true)
 
-    socket.emit('create-reply', { postId, content: content.trim() })
+    try {
+      const { error } = await supabase.from('replies').insert({
+        post_id: postId,
+        student_name: user.name,
+        content: content.trim(),
+      })
 
-    socket.once('error', (data: { message: string }) => {
-      alert(`Erro: ${data.message}`)
-      setIsSubmitting(false)
-    })
+      if (error) {
+        throw error
+      }
 
-    // Limpar campo após envio
-    setTimeout(() => {
+      // Limpar campo após sucesso
       setContent('')
+    } catch (error: any) {
+      console.error('Erro ao criar resposta:', error)
+      alert(`Erro ao criar resposta: ${error.message}`)
+    } finally {
       setIsSubmitting(false)
-    }, 100)
+    }
   }
 
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '../contexts/UserContext'
-import { getSocket } from '../lib/socket'
+import { supabase } from '../lib/supabase'
 import { Post, Reply } from '../types'
 import PostForm from './PostForm'
 import ReplyForm from './ReplyForm'
@@ -8,65 +8,99 @@ import ReplyForm from './ReplyForm'
 const Dashboard = () => {
   const { user } = useUser()
   const [posts, setPosts] = useState<Post[]>([])
+  const [replies, setReplies] = useState<Reply[]>([])
 
+  // Carregar posts iniciais
   useEffect(() => {
-    const socket = getSocket()
-    if (!socket) return
+    const loadPosts = async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    // Receber todos os posts iniciais
-    socket.on('posts-updated', (data: Post[]) => {
-      setPosts(data)
-    })
+      if (error) {
+        console.error('Erro ao carregar posts:', error)
+        return
+      }
 
-    // Receber novo post criado
-    socket.on('post-created', (post: Post) => {
-      setPosts((prev) => {
-        // Verificar se o post já existe
-        if (prev.find((p) => p.id === post.id)) {
-          return prev
+      if (data) {
+        setPosts(data)
+      }
+    }
+
+    const loadReplies = async () => {
+      const { data, error } = await supabase
+        .from('replies')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Erro ao carregar replies:', error)
+        return
+      }
+
+      if (data) {
+        setReplies(data)
+      }
+    }
+
+    loadPosts()
+    loadReplies()
+  }, [])
+
+  // Subscription para novos posts em tempo real
+  useEffect(() => {
+    const channel = supabase
+      .channel('posts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'posts',
+        },
+        (payload) => {
+          const newPost = payload.new as Post
+          setPosts((prev) => [newPost, ...prev])
         }
-        return [...prev, { ...post, replies: [] }]
-      })
-    })
-
-    // Receber nova resposta criada
-    socket.on('reply-created', (reply: Reply) => {
-      setPosts((prev) =>
-        prev.map((post) => {
-          if (post.id === reply.postId) {
-            // Verificar se a resposta já existe
-            if (post.replies?.find((r) => r.id === reply.id)) {
-              return post
-            }
-            return {
-              ...post,
-              replies: [...(post.replies || []), reply],
-            }
-          }
-          return post
-        })
       )
-    })
-
-    // Notificações de usuários conectados/desconectados
-    socket.on('user-connected', (data: { name: string; role: string }) => {
-      console.log(`Usuário conectado: ${data.name} (${data.role})`)
-    })
-
-    socket.on('user-disconnected', (data: { name: string; role: string }) => {
-      console.log(`Usuário desconectado: ${data.name} (${data.role})`)
-    })
+      .subscribe()
 
     return () => {
-      socket.off('posts-updated')
-      socket.off('post-created')
-      socket.off('reply-created')
-      socket.off('user-connected')
-      socket.off('user-disconnected')
+      supabase.removeChannel(channel)
     }
   }, [])
 
-  const formatTimestamp = (timestamp: number) => {
+  // Subscription para novas respostas em tempo real
+  useEffect(() => {
+    const channel = supabase
+      .channel('replies-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'replies',
+        },
+        (payload) => {
+          const newReply = payload.new as Reply
+          setReplies((prev) => [...prev, newReply])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Combinar posts com suas respostas
+  const postsWithReplies = posts.map((post) => ({
+    ...post,
+    replies: replies.filter((reply) => reply.post_id === post.id),
+  }))
+
+  const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
     return date.toLocaleString('pt-BR', {
       day: '2-digit',
@@ -111,7 +145,7 @@ const Dashboard = () => {
         {user?.role === 'teacher' && <PostForm />}
 
         <div className="space-y-6">
-          {posts.length === 0 ? (
+          {postsWithReplies.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-8 text-center">
               <p className="text-gray-500 text-lg">
                 {user?.role === 'teacher'
@@ -120,25 +154,25 @@ const Dashboard = () => {
               </p>
             </div>
           ) : (
-            posts.map((post) => (
+            postsWithReplies.map((post) => (
               <div
                 key={post.id}
                 className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-start mb-4">
                   <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 flex-shrink-0">
-                    {post.teacherName.charAt(0).toUpperCase()}
+                    {post.teacher_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-bold text-gray-800">
-                        {post.teacherName}
+                        {post.teacher_name}
                       </h3>
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                         Teacher
                       </span>
                       <span className="text-xs text-gray-500">
-                        {formatTimestamp(post.timestamp)}
+                        {formatTimestamp(post.created_at)}
                       </span>
                     </div>
                     <p className="text-gray-700 whitespace-pre-wrap">
@@ -153,18 +187,18 @@ const Dashboard = () => {
                     {post.replies.map((reply) => (
                       <div key={reply.id} className="flex items-start">
                         <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 flex-shrink-0">
-                          {reply.studentName.charAt(0).toUpperCase()}
+                          {reply.student_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="font-semibold text-gray-800 text-sm">
-                              {reply.studentName}
+                              {reply.student_name}
                             </span>
                             <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                               Student
                             </span>
                             <span className="text-xs text-gray-500">
-                              {formatTimestamp(reply.timestamp)}
+                              {formatTimestamp(reply.created_at)}
                             </span>
                           </div>
                           <p className="text-gray-600 text-sm">{reply.content}</p>

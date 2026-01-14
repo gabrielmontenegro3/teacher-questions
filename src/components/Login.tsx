@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useUser } from '../contexts/UserContext'
-import { connectSocket } from '../lib/socket'
 
 const Login = () => {
   const [name, setName] = useState('')
@@ -14,24 +13,16 @@ const Login = () => {
       return
     }
 
-    const socket = connectSocket()
-
-    const handleLoginSuccess = (data: { userId: string; user: any }) => {
-      setUser(data.user)
-      socket.off('login-success', handleLoginSuccess)
-      socket.off('error', handleError)
+    // Criar usuário local (sem autenticação real, apenas sessão)
+    const user = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      role,
     }
 
-    const handleError = (data: { message: string }) => {
-      alert(`Erro: ${data.message}`)
-      socket.off('login-success', handleLoginSuccess)
-      socket.off('error', handleError)
-    }
-
-    socket.on('login-success', handleLoginSuccess)
-    socket.on('error', handleError)
-
-    socket.emit('login', { name: name.trim(), role })
+    // Armazenar no localStorage para persistir entre recarregamentos
+    localStorage.setItem('user', JSON.stringify(user))
+    setUser(user)
   }
 
   return (
